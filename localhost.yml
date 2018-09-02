@@ -1,0 +1,136 @@
+---
+- hosts: localhost
+  tasks:
+    # apt install common packages
+    - name: Install common packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, bash-completion, python-pip, pass, htop, redshift, peek, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev]
+
+    # Install stable version of Firefox
+    - name: Check existing firefox
+      stat:
+        path: /opt/firefox/firefox
+      register: firefox
+    - name: Install stable Firefox instead of firefox-esr
+      unarchive:
+        src: https://download-installer.cdn.mozilla.net/pub/firefox/releases/61.0.2/linux-x86_64/en-US/firefox-61.0.2.tar.bz2
+        dest: /opt/
+        remote_src: yes
+      when: not firefox.stat.exists
+    - name: Create firefox desktop link
+      copy:
+        src: firefox.desktop
+        dest: /usr/share/applications/firefox-stable.desktop
+    - name: Uninstall firefox-esr
+      apt:
+        name: firefox-esr
+        state: absent
+
+    # Install kubectl
+    - name: Receive google cloud gpg key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+    - name: Add Kubernetes repository
+      apt_repository:
+        repo: "deb http://apt.kubernetes.io/ kubernetes-stretch main"
+        state: present
+    - name: Install kubectl
+      apt:
+        name: kubectl
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+
+    # Install Weechat
+    - name: Receive WeeChat gpg key
+      apt_key:
+        id: 11E9DE8848F2B65222AA75B8D1820DB22A11534E
+        keyserver: p80.pool.sks-keyservers.net
+    - name: Add WeeChat repository
+      apt_repository:
+        repo: "deb https://weechat.org/debian {{ ansible_distribution_version|dirname }} main"
+        state: present
+    - name: Install weechat
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+      with_items: [weechat-curses, weechat-plugins, weechat-python, weechat-perl]
+    - name: Install weeslack dependencies
+      pip:
+        name: websocket-client
+
+    # Install custom Emacs configuration
+    - name: Check existing emacs config
+      stat:
+        path: ~/.emacs.d
+      become: true
+      become_user: paul
+      register: sym
+    - name: Move emacs config if not a link
+      copy:
+        src: ~/.emacs.d
+        dest: ~/.emacs.d.bak
+      become: true
+      become_user: paul
+      when: sym.stat.islnk is defined and not sym.stat.islnk
+    - name: Remove emacs config if not a link
+      file:
+        state: absent
+        path: ~/.emacs.d
+      become: true
+      become_user: paul
+      when: sym.stat.islnk is defined and not sym.stat.islnk
+    - name: Install Paul s emacs config
+      git:
+        repo: 'https://github.com/paulrbr/emacs.d'
+        dest: ~/.emacs.d.git
+      become: true
+      become_user: paul
+    - name: Link emacs config
+      file:
+        state: link
+        src: ~/.emacs.d.git
+        dest:  ~/.emacs.d
+      become: true
+      become_user: paul
+
+    # Install custom bash profile
+    - name: Check existing profile
+      stat:
+        path: ~/.profile
+      become: true
+      become_user: paul
+      register: sym
+    - name: Install profile
+      command: "curl -s https://raw.githubusercontent.com/paulRbr/profile/master/install | bash"
+      become: true
+      become_user: paul
+      when: sym.stat.islnk is defined and not sym.stat.islnk
+
+    # Install "$HOME" opt dir
+    - name: Check existing /opt directory
+      stat:
+        path: /opt
+      register: sym
+    - name: Move /opt if not a link
+      copy:
+        src: /opt
+        dest: /opt.bak
+      when: sym.stat.islnk is defined and not sym.stat.islnk
+    - name: Remove /opt if not a link
+      file:
+        state: absent
+        path: /opt
+      when: sym.stat.islnk is defined and not sym.stat.islnk
+    - name: Link ~/opt
+      file:
+        state: link
+        src: /home/paul/opt
+        dest:  /opt
