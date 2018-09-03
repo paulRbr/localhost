@@ -16,6 +16,9 @@
         update_cache: yes
         cache_valid_time: 86400
       with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, redshift, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev]
+    - name: Install cheat python package
+      pip:
+        name: cheat
 
     # Install stable version of Firefox
     - name: Check existing firefox
