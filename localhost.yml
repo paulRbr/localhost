@@ -1,5 +1,21 @@
 ---
 - hosts: localhost
+  vars:
+    rbenv:
+      env: user
+      version: v1.1.1
+      default_ruby: 2.5.1
+      rubies:
+      - version: 2.5.1
+  handlers:
+    - name: ibus restart
+      command: ibus restart
+  # Install Ruby environment
+  roles:
+    - role: zzet.rbenv
+      rbenv_users:
+        - paul
+
   tasks:
     - command: lsb_release -cs
       register: distribution_release
@@ -195,3 +211,12 @@
         state: link
         src: /home/paul/opt
         dest:  /opt
+
+    # Setup ruby env (install common ruby gems)
+    - name: Install ruby gems
+      gem:
+        name: "{{ item }}"
+        state: present
+      with_items: [bundler, rotp]
+      become: true
+      become_user: paul
