@@ -90,6 +90,23 @@
         update_cache: yes
         cache_valid_time: 86400
 
+    # Install nextcloud desktop client
+    - name: Receive nextcloud-devs gpg key
+      apt_key:
+        id: 1FCD77DD0DBEF5699AD2610160EE47FBAD3DD469
+        keyserver: keyserver.ubuntu.com
+        state: present
+    - name: Add PPA nextcloud-devs
+      apt_repository:
+        repo: "deb http://ppa.launchpad.net/nextcloud-devs/client/ubuntu bionic main"
+        state: present
+    - name: Install nextcloud-client
+      apt:
+        name: nextcloud-client
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+
     # Install Weechat
     - name: Receive WeeChat gpg key
       apt_key:
