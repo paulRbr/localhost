@@ -20,6 +20,24 @@
       pip:
         name: cheat
 
+    # Install ibus-emoji (Emoji keyboard)
+    - name: Fetch repostiory for ibus-uniemoji
+      git:
+        repo: "https://github.com/salty-horse/ibus-uniemoji.git"
+        dest: ~/devel/ibus-uniemoji/
+      become: true
+      become_user: paul
+    - name: Check existing ibus-uniemoji installation
+      stat:
+        path: /home/paul/devel/ibus-uniemoji/uniemoji.xml
+      register: ibus_uniemoji
+    - name: Install ibus-uniemoji
+      make:
+        chdir: /home/paul/devel/ibus-uniemoji
+        target: install
+      when: not ibus_uniemoji.stat.exists
+      notify: ibus restart
+
     # Install stable version of Firefox
     - name: Check existing firefox
       stat:
