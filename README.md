@@ -6,7 +6,7 @@ This repository contains a `localhost.yml` Ansible playbook to setup a freshly i
 
 - Common debian packages installation: 
   - Basic packages: **sudo, rsync, curl, git, apt-transport-https, bash-completion, python-pip, htop**
-  - Software packages: **byobu (text window manager and terminal multiplexer), emacs (text editor), redshift (shift screen backlight to red for your eyes only), peek (animated screenshots as GIFs), firefox 61 (internet browser), weechat (IRC client & [Slack client](https://github.com/wee-slack/wee-slack)), kubectl (Kubernetes command-line tool)**
+  - Software packages: **byobu (text window manager and terminal multiplexer), emacs (text editor), peek (animated screenshots as GIFs), firefox 61 (internet browser), weechat (IRC client & [Slack client](https://github.com/wee-slack/wee-slack)), kubectl (Kubernetes command-line tool)**
   - Misc packages: **sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware**
   - Smartkey/encryption packages: **pass, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev**
 - Custom [emacs configuration](https://github.com/paulRbr/emacs.d)
