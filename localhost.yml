@@ -31,7 +31,7 @@
         state: present
         update_cache: yes
         cache_valid_time: 86400
-      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev]
+      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, haskell-stack]
     - name: Install cheat python package
       pip:
         name: cheat
@@ -220,3 +220,8 @@
       with_items: [bundler, rotp]
       become: true
       become_user: paul
+
+
+    # Upgrade Haskell Stack tool
+    - name: Upgrade Stack (Haskell)
+      command: stack upgrade --binary-only
