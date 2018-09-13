@@ -225,3 +225,24 @@
     # Upgrade Haskell Stack tool
     - name: Upgrade Stack (Haskell)
       command: stack upgrade --binary-only
+
+    - name: Install hindent for Haskell formatting
+      command: "stack install {{ item }}"
+      with_items: [hindent, stylish-haskell]
+      become: true
+      become_user: paul
+
+    # Install NVM
+    - name: Get NVM installation script
+      get_url:
+        url: https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh
+        dest: /tmp/nvm_install.sh
+      register: nvm_script
+
+    - name: Install NVM
+      command: sh /tmp/nvm_install.sh
+      become: true
+      become_user: paul
+
+    - name: Install node
+      command: nvm install 8.9.3
