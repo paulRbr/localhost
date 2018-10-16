@@ -6,7 +6,7 @@
       version: v1.1.1
       default_ruby: 2.5.1
       rubies:
-      - version: 2.5.1
+        - version: 2.5.1
   handlers:
     - name: ibus restart
       command: ibus restart
@@ -31,7 +31,7 @@
         state: present
         update_cache: yes
         cache_valid_time: 86400
-      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, haskell-stack, jq]
+      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc]
     - name: Install cheat python package
       pip:
         name: cheat
@@ -222,27 +222,7 @@
       become_user: paul
 
 
-    # Upgrade Haskell Stack tool
-    - name: Upgrade Stack (Haskell)
-      command: stack upgrade --binary-only
-
-    - name: Install hindent for Haskell formatting
-      command: "stack install {{ item }}"
-      with_items: [hindent, stylish-haskell]
-      become: true
-      become_user: paul
-
-    # Install NVM
-    - name: Get NVM installation script
-      get_url:
-        url: https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh
-        dest: /tmp/nvm_install.sh
-      register: nvm_script
-
-    - name: Install NVM
-      command: sh /tmp/nvm_install.sh
-      become: true
-      become_user: paul
-
-    - name: Install node
-      command: nvm install 8.9.3
+    # Include Fretlink dependencies
+    - include: tasks/fretlink.yml
+      when: fretlink_enabled | default(false)
+      tags: [ 'fretlink' ]
