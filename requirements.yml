@@ -1,1 +1,4 @@
 - src: zzet.rbenv
+  version: 3.4.7
+- src: abdennour.golang
+  version: v1.0.12

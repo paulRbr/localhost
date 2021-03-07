@@ -3,10 +3,10 @@
   vars:
     rbenv:
       env: user
-      version: v1.1.1
-      default_ruby: 2.5.1
+      version: v1.1.2
+      default_ruby: 2.7.2
       rubies:
-        - version: 2.5.1
+        - version: 2.7.2
   handlers:
     - name: ibus restart
       command: ibus restart
@@ -15,6 +15,12 @@
     - role: zzet.rbenv
       rbenv_users:
         - paul
+    - role: abdennour.golang
+      become: yes
+      golang_version: "1.16"
+      golang_packages: []
+      golang_users:
+      - "paul" # "{{ansible_ssh_user}}" might be suitable
 
   tasks:
     - command: lsb_release -cs
@@ -27,11 +33,10 @@
     # apt install common packages
     - name: Install common packages
       apt:
-        name: "{{ item }}"
+        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp]
         state: present
         update_cache: yes
         cache_valid_time: 86400
-      with_items: [sudo, rsync, curl, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc]
     - name: Install cheat python package
       pip:
         name: cheat
@@ -54,57 +59,92 @@
       when: not ibus_uniemoji.stat.exists
       notify: ibus restart
 
-    # Install stable version of Firefox
-    - name: Check existing firefox
-      stat:
-        path: /opt/firefox/firefox
-      register: firefox
-    - name: Install stable Firefox instead of firefox-esr
-      unarchive:
-        src: https://download-installer.cdn.mozilla.net/pub/firefox/releases/61.0.2/linux-x86_64/en-US/firefox-61.0.2.tar.bz2
-        dest: /opt/
-        remote_src: yes
-      when: not firefox.stat.exists
-    - name: Create firefox desktop link
-      copy:
-        src: firefox.desktop
-        dest: /usr/share/applications/firefox-stable.desktop
+    # Add Element-desktop dedicated deb repository
+    - name: Make sure shared keyring dir exists
+      file:
+        path: /usr/share/keyrings
+        state: directory
+    - name: Fetch riot-em public key
+      get_url:
+        url: "https://packages.riot.im/debian/riot-im-archive-keyring.gpg"
+        dest: /usr/share/keyrings/riot-im-archive-keyring.gpg
+
+    - name: Add riot-im (old Element name) repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/riot-im-archive-keyring.gpg] https://packages.riot.im/debian/ default main"
+        state: present
+
+    # Add unstable debian repository
+    - name: Add specified repository into sources list
+      apt_repository:
+        repo: deb http://deb.debian.org/debian/ unstable main contrib non-free
+        state: present
+    - name: Set low-priority on unstable channel
+      blockinfile:
+        block: |
+          Package: *
+          Pin: release n=bullseye
+          Pin-Priority: 900
+
+          Package: *
+          Pin release a=unstable
+          Pin-Priority: 10
+
+          Package: *
+          Pin release n=unstable
+          Pin-Priority: 10
+        path: /etc/apt/preferences.d/99pin-unstable
+        create: yes
+
+    # Install recent softwares
+    - name: Install more recent softwares
+      apt:
+        name: [firefox, webext-browserpass, element-desktop]
+        default_release: unstable
+        update_cache: yes
+        cache_valid_time: 86400
+
+    # - name: Create firefox desktop link
+    #   copy:
+    #     src: firefox.desktop
+    #     dest: /usr/share/applications/firefox-stable.desktop
     - name: Uninstall firefox-esr
       apt:
         name: firefox-esr
         state: absent
 
     # Install Docker
-    - name: Receive Docker gpg ke
+    - name: Receive Docker gpg key
       apt_key:
         url: https://download.docker.com/linux/debian/gpg
         state: present
     - name: Add Docker repository
       apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+        repo: "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"
         state: present
+        update_cache: true
     - name: Install docker
       apt:
-        name: docker-ce
+        name: [docker-ce, docker-ce-cli, containerd.io]
         state: present
         update_cache: yes
         cache_valid_time: 86400
 
     # Install kubectl
-    - name: Receive google cloud gpg key
-      apt_key:
-        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-        state: present
-    - name: Add Kubernetes repository
-      apt_repository:
-        repo: "deb http://apt.kubernetes.io/ kubernetes-stretch main"
-        state: present
-    - name: Install kubectl
-      apt:
-        name: kubectl
-        state: present
-        update_cache: yes
-        cache_valid_time: 86400
+    # - name: Receive google cloud gpg key
+    #   apt_key:
+    #     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    #     state: present
+    # - name: Add Kubernetes repository
+    #   apt_repository:
+    #     repo: "deb http://apt.kubernetes.io/ kubernetes-stretch main"
+    #     state: present
+    # - name: Install kubectl
+    #   apt:
+    #     name: kubectl
+    #     state: present
+    #     update_cache: yes
+    #     cache_valid_time: 86400
 
     # Install nextcloud desktop client
     - name: Receive nextcloud-devs gpg key
@@ -116,9 +156,9 @@
       apt_repository:
         repo: "deb http://ppa.launchpad.net/nextcloud-devs/client/ubuntu bionic main"
         state: present
-    - name: Install nextcloud-client
+    - name: Install nextcloud-desktop
       apt:
-        name: nextcloud-client
+        name: nextcloud-desktop
         state: present
         update_cache: yes
         cache_valid_time: 86400
@@ -146,47 +186,52 @@
     # Install custom Emacs configuration
     - name: Check existing emacs config
       stat:
-        path: ~/.emacs.d
+        path: /home/paul/.emacs.d
       become: true
       become_user: paul
       register: sym
     - name: Move emacs config if not a link
       copy:
-        src: ~/.emacs.d
-        dest: ~/.emacs.d.bak
+        src: /home/paul/.emacs.d
+        dest: /home/paul/.emacs.d.bak
       become: true
       become_user: paul
       when: sym.stat.islnk is defined and not sym.stat.islnk
     - name: Remove emacs config if not a link
       file:
         state: absent
-        path: ~/.emacs.d
+        path: /home/paul/.emacs.d
       become: true
       become_user: paul
       when: sym.stat.islnk is defined and not sym.stat.islnk
     - name: Install Paul s emacs config
       git:
         repo: 'https://github.com/paulrbr/emacs.d'
-        dest: ~/.emacs.d.git
+        dest: /home/paul/.emacs.d.git
       become: true
       become_user: paul
     - name: Link emacs config
       file:
         state: link
-        src: ~/.emacs.d.git
-        dest:  ~/.emacs.d
+        src: /home/paul/.emacs.d.git
+        dest:  /home/paul/.emacs.d
       become: true
       become_user: paul
 
     # Install custom bash profile
     - name: Check existing profile
       stat:
-        path: ~/.profile
+        path: /home/paul/.profile
       become: true
       become_user: paul
       register: sym
+    - name: Fetch profile
+      get_url:
+        url: "https://raw.githubusercontent.com/paulRbr/profile/master/install"
+        dest: /tmp/profile-install.sh
+      when: sym.stat.islnk is defined and not sym.stat.islnk
     - name: Install profile
-      command: "curl -s https://raw.githubusercontent.com/paulRbr/profile/master/install | bash"
+      command: "bash /tmp/profile-install.sh && rm /tmp/profile-install.sh"
       become: true
       become_user: paul
       when: sym.stat.islnk is defined and not sym.stat.islnk
@@ -206,7 +251,7 @@
         state: absent
         path: /opt
       when: sym.stat.islnk is defined and not sym.stat.islnk
-    - name: Link ~/opt
+    - name: Link /home/paul/opt
       file:
         state: link
         src: /home/paul/opt
@@ -223,6 +268,6 @@
 
 
     # Include Fretlink dependencies
-    - include: tasks/fretlink.yml
-      when: fretlink_enabled | default(false)
-      tags: [ 'fretlink' ]
+    # - include: tasks/fretlink.yml
+    #   when: fretlink_enabled | default(false)
+    #   tags: [ 'fretlink' ]
