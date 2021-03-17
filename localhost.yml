@@ -1,5 +1,7 @@
 ---
 - hosts: localhost
+  become: true
+  become_user: root
   vars:
     rbenv:
       env: user
@@ -33,7 +35,7 @@
     # apt install common packages
     - name: Install common packages
       apt:
-        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp]
+        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp]
         state: present
         update_cache: yes
         cache_valid_time: 86400
@@ -59,6 +61,16 @@
       when: not ibus_uniemoji.stat.exists
       notify: ibus restart
 
+    # Add Spotify dedicated deb repo
+    - name: Receive Spotify gpg key
+      apt_key:
+        url: https://download.spotify.com/debian/pubkey_0D811D58.gpg
+        state: present
+    - name: Add Spotify repository
+      apt_repository:
+        repo: "deb http://repository.spotify.com stable non-free"
+        state: present
+
     # Add Element-desktop dedicated deb repository
     - name: Make sure shared keyring dir exists
       file:
@@ -68,7 +80,6 @@
       get_url:
         url: "https://packages.riot.im/debian/riot-im-archive-keyring.gpg"
         dest: /usr/share/keyrings/riot-im-archive-keyring.gpg
-
     - name: Add riot-im (old Element name) repository
       apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/riot-im-archive-keyring.gpg] https://packages.riot.im/debian/ default main"
@@ -99,7 +110,7 @@
     # Install recent softwares
     - name: Install more recent softwares
       apt:
-        name: [firefox, webext-browserpass, element-desktop]
+        name: [firefox, webext-browserpass, element-desktop, spotify-client]
         default_release: unstable
         update_cache: yes
         cache_valid_time: 86400
@@ -208,6 +219,7 @@
       git:
         repo: 'https://github.com/paulrbr/emacs.d'
         dest: /home/paul/.emacs.d.git
+      ignore_errors: true
       become: true
       become_user: paul
     - name: Link emacs config
@@ -215,6 +227,24 @@
         state: link
         src: /home/paul/.emacs.d.git
         dest:  /home/paul/.emacs.d
+      become: true
+      become_user: paul
+    - name: Install Gnome Config tool
+      apt:
+        name: gconf2
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+    - name: Allow org-protocol url handlers in gnome
+      command: "{{ item }}"
+      with_items:
+        - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/command '/usr/local/bin/emacsclient %s' --type String"
+        - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/enabled --type Boolean true"
+      become: true
+      become_user: paul
+
+    - name: Show week numbers in calendar of Gnome
+      command: "gsettings set org.gnome.desktop.calendar show-weekdate true"
       become: true
       become_user: paul
 
