@@ -1,0 +1,25 @@
+---
+# Install ruby system deps
+- name: Install ruby sys deps
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 86400
+  with_items: [ libpq-dev, cmake, postgresql-13, redis-server ]
+
+- name: Check existing Heroku binary
+  stat:
+    path: /usr/bin/heroku
+  register: heroku_binary
+
+- name: Download Heroku CLI
+  get_url:
+    url: https://cli-assets.heroku.com/install-ubuntu.sh
+    dest: /tmp/install-ubuntu.sh
+  when: heroku_binary.stat.executable is not defined
+
+- name: Install Heroku CLI
+  shell:
+    cmd: cat /tmp/install-ubuntu.sh | sh -s
+  when: heroku_binary.stat.executable is not defined
