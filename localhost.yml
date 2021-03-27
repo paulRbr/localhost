@@ -329,12 +329,13 @@
         name: minidlna
         state: present
 
+
+    # Install Rust
     - name: Check existing rustup binary
       stat:
         path: /home/paul/.cargo/bin/rustup
       register: rustup_binary
 
-    # Install Rust
     - name: Fetch Rustup installation script
       get_url:
         url: https://sh.rustup.rs
@@ -351,6 +352,56 @@
     - name: Use latest stable version of Rust
       shell:
         cmd: rustup update
+      become: true
+      become_user: paul
+
+    - name: Fetch Rust utilies RLS & rustfmt
+      shell:
+        cmd: rustup component add rls rust-analysis rust-src rustfmt
+      become: true
+      become_user: paul
+
+    # Install NVM
+    - name: Check existing node
+      stat:
+        path: /usr/bin/node
+      register: node_binary
+
+    - name: Get NVM installation script
+      get_url:
+        url: https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh
+        dest: /tmp/nvm_install.sh
+      when: node_binary.stat.executable is not defined
+
+    - name: Install NVM
+      command: sh /tmp/nvm_install.sh
+      become: true
+      become_user: paul
+      when: node_binary.stat.executable is not defined
+
+    - name: Install node
+      shell:
+        cmd: "bash -l -c 'nvm install node'"
+      when: node_binary.stat.executable is not defined
+      become: true
+      become_user: paul
+
+    # Install Yarn
+    - name: Receive YarnPKG gpg key
+      apt_key:
+        url: https://dl.yarnpkg.com/debian/pubkey.gpg
+        state: present
+    - name: Add YarnPKG repository
+      apt_repository:
+        repo: "deb https://dl.yarnpkg.com/debian/ stable main"
+        state: present
+    - name: Install yarn
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 86400
+      with_items: [yarn]
 
     # Include Fretlink dependencies
     - include: tasks/fretlink.yml
