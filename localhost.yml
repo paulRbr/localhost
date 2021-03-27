@@ -3,6 +3,7 @@
   become: true
   become_user: root
   vars:
+    bump_enabled: true
     rbenv:
       env: user
       version: v1.1.2
@@ -35,7 +36,7 @@
     # apt install common packages
     - name: Install common packages
       apt:
-        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp]
+        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp, vlc, net-tools]
         state: present
         update_cache: yes
         cache_valid_time: 86400
@@ -242,6 +243,17 @@
         - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/enabled --type Boolean true"
       become: true
       become_user: paul
+    - name: Register emacsclient as the org-protocol handler
+      copy:
+        content: |
+          [Desktop Entry]
+          Name=org-protocol
+          Exec=emacsclient %u
+          Type=Application
+          Terminal=false
+          Categories=System;
+          MimeType=x-scheme-handler/org-protocol;
+        dest: "/home/paul/.local/share/applications/org-protocol.desktop"
 
     - name: Show week numbers in calendar of Gnome
       command: "gsettings set org.gnome.desktop.calendar show-weekdate true"
@@ -296,8 +308,56 @@
       become: true
       become_user: paul
 
+    # Install Dhall binaries
+    - name: Fetch dhall-json binaries
+      unarchive:
+        src: "{{ item }}"
+        dest: /usr/local/bin
+        remote_src: yes
+        extra_opts:
+          - "--bzip2"
+          - "--strip-components"
+          - "2"
+      with_items:
+        - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-json-1.7.6-x86_64-linux.tar.bz2
+        - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-1.38.1-x86_64-linux.tar.bz2
+        - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-openapi-1.0.0-x86_64-linux.tar.bz2
+
+    # Install & configure minidlna
+    - name: Install minidlna
+      apt:
+        name: minidlna
+        state: present
+
+    - name: Check existing rustup binary
+      stat:
+        path: /home/paul/.cargo/bin/rustup
+      register: rustup_binary
+
+    # Install Rust
+    - name: Fetch Rustup installation script
+      get_url:
+        url: https://sh.rustup.rs
+        dest: /tmp/install-rustup.sh
+      when: rustup_binary.stat.executable is not defined
+
+    - name: Install Rustup
+      shell:
+        cmd: cat /tmp/install-rustup.sh | sh -s -- -y
+      become: true
+      become_user: paul
+      when: rustup_binary.stat.executable is not defined
+
+    - name: Use latest stable version of Rust
+      shell:
+        cmd: rustup update
 
     # Include Fretlink dependencies
-    # - include: tasks/fretlink.yml
-    #   when: fretlink_enabled | default(false)
-    #   tags: [ 'fretlink' ]
+    - include: tasks/fretlink.yml
+      when: fretlink_enabled | default(false)
+      tags: [ 'fretlink' ]
+
+    # Include Bump dependencies
+    - include: tasks/bump.yml
+      when: bump_enabled | default(false)
+      tags: [ 'bump' ]
