@@ -36,7 +36,7 @@
     # apt install common packages
     - name: Install common packages
       apt:
-        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp, vlc, net-tools]
+        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp, vlc, net-tools, fonts-takao-mincho, default-jdk, shellcheck]
         state: present
         update_cache: yes
         cache_valid_time: 86400
@@ -322,6 +322,7 @@
         - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-json-1.7.6-x86_64-linux.tar.bz2
         - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-1.38.1-x86_64-linux.tar.bz2
         - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-openapi-1.0.0-x86_64-linux.tar.bz2
+        - https://github.com/dhall-lang/dhall-haskell/releases/download/1.38.1/dhall-yaml-1.2.6-x86_64-linux.tar.bz2
 
     # Install & configure minidlna
     - name: Install minidlna
