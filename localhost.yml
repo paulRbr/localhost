@@ -36,7 +36,7 @@
     # apt install common packages
     - name: Install common packages
       apt:
-        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp, vlc, net-tools, fonts-takao-mincho, default-jdk, shellcheck]
+        name: [sudo, rsync, curl, wget, byobu, emacs, git, apt-transport-https, ca-certificates, bash-completion, python3-pip, pass, htop, peek, sqlite3, ibus, im-config, pulseaudio, pulseaudio-module-bluetooth, pavucontrol, bluez, bluez-firmware, gnupg2, gnupg-agent, pinentry-curses, scdaemon, pcscd, yubikey-personalization, libusb-1.0-0-dev, jq, ipcalc, tlp, gimp, vlc, net-tools, fonts-takao-mincho, default-jdk, shellcheck, pandoc]
         state: present
         update_cache: yes
         cache_valid_time: 86400
@@ -142,6 +142,14 @@
         update_cache: yes
         cache_valid_time: 86400
 
+    - name: Install docker credential helper
+      unarchive:
+        src: "{{ item }}"
+        dest: /usr/local/bin
+        remote_src: yes
+      with_items:
+        - https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-pass-v0.6.3-amd64.tar.gz
+
     # Install kubectl
     # - name: Receive google cloud gpg key
     #   apt_key:
@@ -239,7 +247,7 @@
     - name: Allow org-protocol url handlers in gnome
       command: "{{ item }}"
       with_items:
-        - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/command '/usr/local/bin/emacsclient %s' --type String"
+        - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/command '/usr/bin/emacsclient %s' --type String"
         - "gconftool-2 -s /desktop/gnome/url-handlers/org-protocol/enabled --type Boolean true"
       become: true
       become_user: paul
@@ -254,6 +262,14 @@
           Categories=System;
           MimeType=x-scheme-handler/org-protocol;
         dest: "/home/paul/.local/share/applications/org-protocol.desktop"
+      become: true
+      become_user: paul
+
+    - name: Reload desktop environment
+      shell:
+        cmd: update-desktop-database ~/.local/share/applications/
+      become: true
+      become_user: paul
 
     - name: Show week numbers in calendar of Gnome
       command: "gsettings set org.gnome.desktop.calendar show-weekdate true"
@@ -362,6 +378,25 @@
       become: true
       become_user: paul
 
+    # Install Deno
+    - name: Check existing deno binary
+      stat:
+        path: /home/paul/.deno/bin/deno
+      register: deno_binary
+
+    - name: Fetch Deno installation script
+      get_url:
+        url: https://deno.land/x/install/install.sh
+        dest: /tmp/install-deno.sh
+      when: deno_binary.stat.executable is not defined
+
+    - name: Install Deno
+      shell:
+        cmd: cat /tmp/install-deno.sh | sh -s
+      become: true
+      become_user: paul
+      when: deno_binary.stat.executable is not defined
+
     # Install NVM
     - name: Check existing node
       stat:
@@ -403,6 +438,16 @@
         update_cache: yes
         cache_valid_time: 86400
       with_items: [yarn]
+
+    # Install global NPM packages
+    # - name: Install Node generic packages
+    #   npm:
+    #     name: "{{ item }}"
+    #     state: present
+    #     global: yes
+    #   with_items: [eslint_d]
+    #   become: true
+    #   become_user: paul
 
     # Include Fretlink dependencies
     - include: tasks/fretlink.yml
